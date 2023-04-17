@@ -40,7 +40,7 @@ void alarmInt()
   //proof of interrupt
   Serial.println("INT 0");
   measure = true;
-  clock.clearAlarm1();
+  
 }
 
 void loop() {
@@ -56,6 +56,7 @@ void loop() {
     Serial.print("Pressure (mBar): ");
     Serial.println(Pressure_Sensor_Measure_mBar());//Takes integer argument to decide how many measurements the sensor will take before returning mean.
 
+    clock.clearAlarm1();
     measure = false;
   }
 

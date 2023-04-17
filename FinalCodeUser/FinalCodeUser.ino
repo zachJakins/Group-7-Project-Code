@@ -6,7 +6,7 @@
 RF24 radio(9, 8); // CE, CSN
 //const byte address[10] = "ADDRESS01";
 const byte address[6] = "00001";
-char txt = "";
+char txt[32] = "";
 
 void setup() {
   Serial.begin(9600);
@@ -24,7 +24,7 @@ void loop() {
   //transmit to the address
   radio.openWritingPipe(address);
   radio.stopListening();
-  txt = "1";
+  txt[32] = "1";
   radio.write(&txt, sizeof(txt));
   
   //read what comes back
@@ -32,7 +32,7 @@ void loop() {
   radio.startListening();
 
   if (radio.available()) {
-    txt = "";
+    txt[32] = "";
     radio.read(&txt, sizeof(txt));
   }
 

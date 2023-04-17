@@ -4,7 +4,7 @@ double TOF_Sensor_Distance_Measure_MM(int Mean_Measurements_Count)
 {
     Wire.begin();
     DFRobot_VL53L0X sensor;//creates sensor object
-    double measurements;
+    double measurements=0;
 
     //Could waste power if we initialise sensor every time, how much realistically?
     sensor.begin(0x50);

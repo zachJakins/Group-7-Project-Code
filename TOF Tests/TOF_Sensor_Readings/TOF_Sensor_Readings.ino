@@ -3,21 +3,19 @@
 
 
 //Test Script get rid of when using as an include.
-void setup()
-{
+void setup() {
   Serial.begin(115200);
 
   // wait until serial port opens for native USB devices
-  while (! Serial) {
+  while (!Serial) {
     delay(1);
   }
   Serial.print("Sensor Mean: ");
   Serial.println(MEAN);
 
-  for (int i = 0; i < 100; i++)
-  {
+  for (int i = 0; i < 100; i++) {
     Serial.println(TOF_Sensor_Distance_Measure_MM(MEAN));
-    delay(100);
+    delay(50);
   }
   Serial.println("FINISHED");
 }

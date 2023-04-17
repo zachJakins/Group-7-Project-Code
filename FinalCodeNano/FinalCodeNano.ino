@@ -3,6 +3,9 @@
 #include <RF24.h>
 #include <nRF24L01.h>
 
+#define NOISEPIN 2
+#define NANOADDRESS 0x0B
+
 RF24 radio(9, 8); // CE, CSN
 //const byte address[10] = "ADDRESS01";
 const byte address[6] = "00001";
@@ -12,7 +15,7 @@ boolean radioReceived = 0;
 
 void setup() {
   //setup radio and i2c
-  Wire.begin(10);
+  Wire.begin(NANOADDRESS);
   radio.begin();
 
   radio.setPALevel(RF24_PA_MIN);
@@ -20,13 +23,16 @@ void setup() {
   Wire.onRequest(requestEvent);
   Wire.onReceive(receiveEvent);
 
-  pinMode(1,OUTPUT);
+  pinMode(NOISEPIN,OUTPUT);
+  digitalWrite(NOISEPIN,LOW);
 
   radio.openReadingPipe(0, address);
   radio.startListening();
 }
 
 void loop() {
+  radio.openReadingPipe(0, address);
+  radio.startListening();
   //radio is constantly listening for any data
   if (radio.available()) {
     txt = "";
@@ -43,7 +49,7 @@ void requestEvent()
 
 void receiveEvent(int howMany)
 {
-  digitalWrite(1,HIGH);//turns on the speaker so the user can locate the box
+  digitalWrite(NOISEPIN,HIGH);//turns on the speaker so the user can locate the box
   //radio stops listening and begins transmitting
   radio.stopListening();
   radio.openWritingPipe(address);
@@ -52,8 +58,9 @@ void receiveEvent(int howMany)
   {
     txt = "";
     txt = Wire.read(); // receive byte as a character
+    radio.write(&txt, sizeof(txt));
   }
-  radio.write(&txt, sizeof(txt));
+  
 
   
 }
