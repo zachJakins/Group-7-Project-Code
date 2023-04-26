@@ -7,29 +7,29 @@
 #include <TOF_Sensor.h>
 #include <temp_sensor.h>
 
-#define MEAN 1
-#define TEMPORALRESOLUTION 1
+#define MEAN 10
+#define TEMPORALRESOLUTION 60
 #define LOGNAME "datalog.txt"
 #define NANOPOWERPIN 0
 #define NANOADDRESS 0x0B
 #define INTERRUPTPIN 6
-#define Data 7
+#define DATA 7
 
 
 //setup global variables.
-
 float humidity;
 float temperature;
 double pressure;
 double distance;
 int sample = 0;
-int timerCounter = 0;
+int timerCounter = TEMPORALRESOLUTION; //immediately set timer to the temporal resolution so it starts off with a measurement
 
-boolean measure = false;
-boolean RadioReceived = false;
-boolean interrupt = false;
-boolean sleep = true;
+boolean measure = false; //measure boolean
+boolean RadioReceived = false; //radio ping boolean
+boolean interrupt = false; //interrupt boolean
+boolean sleep = true; //sleep boolean
 
+//clock variables
 RTCAlarmTime alarm;
 DS3231 clock;
 RTCDateTime dt;
@@ -38,7 +38,7 @@ RTCDateTime dt;
 
 void setup() {
   Serial.begin(9600);
-
+  while(!Serial);
 
   clock.begin();
   SD.begin();
@@ -46,8 +46,8 @@ void setup() {
 
   clock.setDateTime(__DATE__, __TIME__);  //sync RTC to PC
 
-  pinMode(INTERRUPTPIN, INPUT_PULLUP);    //Interrupt in with pullup -> needed for RTC
-  pinMode(NANOPOWERPIN, OUTPUT);  //Arduino pin 0 switches the nano
+  pinMode(INTERRUPTPIN, INPUT_PULLUP);  //Interrupt in with pullup -> needed for RTC
+  pinMode(NANOPOWERPIN, OUTPUT);        //Arduino pin 0 switches the nano
 
   LowPower.attachInterruptWakeup(digitalPinToInterrupt(INTERRUPTPIN), alarmInt, FALLING);  //Interrupt
 
@@ -67,8 +67,6 @@ void setup() {
 //Interrupt Function DONT PUT ANYTHING MORE IN HERE IT BREAKS THINGS
 void alarmInt() {
   interrupt = true;  //allows main to work
-  Serial.println("INT");
-  
 }
 
 
@@ -80,30 +78,31 @@ void loop() {
   //Interrupts cause issues so putting this code in main is best.
   if (interrupt)  //on the occasion of an interrupt
   {
-    Serial.println("INTBEG");
-
     digitalWrite(NANOPOWERPIN, LOW);  //Turn the Nano on
 
     //measure counter
     timerCounter++;
-    if (timerCounter == TEMPORALRESOLUTION) {
+    if (timerCounter >= TEMPORALRESOLUTION) {
       timerCounter = 0;
       measure = true;
     }
 
-    Serial.println("INTMID");
+    delay(4000);  //give the Nano 4s to boot up and attempt to receive something from the radio
+
     //requests 1 byte from device NANOADDRESS (the nano)
     Wire.requestFrom(NANOPOWERPIN, 1);
     while (Wire.available())  //reads data
     {
       RadioReceived = Wire.read();  //Nano will send either a 0 (user isn't there) or a 1 (user is there and wants data.)
     }
+    
+    Serial.println(RadioReceived);
 
     Serial.println("INTEND");
     //clears interrupt flags
     interrupt = false;
     clock.clearAlarm1();
-    sleep=true;
+    sleep = true;
   }
 
 
@@ -114,14 +113,18 @@ void loop() {
     clock.enable32kHz(true);  //turn on the 32kHz 32K
 
     //take measurements
-    temp_data(Data, humidity, temperature); //WILL READ NAN IF FAILS
-    dt = clock.getDateTime(); 
-    pressure = Pressure_Sensor_Measure_mBar(); //PRESSURE WILL READ 1043.30 IF IT FAILS OR AN ABSURD VALUE >>1100mBar
-    distance = TOF_Sensor_Distance_Measure_MM(MEAN); //DISTANCE WILL READ 0.00 IF IT FAILS/TOO CLOSE/TOO FAR
+    temp_data(DATA, humidity, temperature);  //WILL READ NAN IF FAILS
+    dt = clock.getDateTime();
+    pressure = Pressure_Sensor_Measure_mBar();        //PRESSURE WILL READ 1043.30 IF IT FAILS OR AN ABSURD VALUE >>1100mBar
+    distance = TOF_Sensor_Distance_Measure_MM(MEAN);  //DISTANCE WILL READ 0.00 IF IT FAILS/TOO CLOSE/TOO FAR
+
+    
 
     //write to SD
-    logData(sample, distance, humidity, temperature, pressure, dt);
+    String dataString = logData(sample, distance, humidity, temperature, pressure, dt);
     sample++;  //increase iteration
+
+    Serial.println(dataString);
 
     measure = false;           //reset measure
     clock.enable32kHz(false);  //turn off the 32kHz 32K to save power
@@ -145,22 +148,21 @@ void loop() {
     }
     Wire.endTransmission();  //ends transmission to nano
 
-    RadioReceived = false; //reset RadioReceived
+    RadioReceived = false;  //reset RadioReceived
   }
   digitalWrite(NANOPOWERPIN, HIGH);  //turn off nano
 
   //sleep until next interrupt.
-  
-  if(sleep)
-  {
+
+  if (sleep) {
     Serial.println("SLEEP");
     sleep = false;
-  LowPower.idle();
+    LowPower.idle();
   }
 }
 
-
-void logData(int sampleNumber, double height, double hum, double temp, double pressure, RTCDateTime clockData) {
+//returns string if wanted
+String logData(int sampleNumber, double height, double hum, double temp, double pressure, RTCDateTime clockData) {
   String dataString = "";  // Make a string for assembling the data to log: (54 char max)
   //GENRAL FORM:  0000;00/00/0000;00:00:00;0000.00;0000.00;00.00;000.00;#
   //WILL BE READ BY USER AS:  0000;00/00/0000;00:00:00;0000.00;0000.00;00.00;000.00;
@@ -183,4 +185,6 @@ void logData(int sampleNumber, double height, double hum, double temp, double pr
     dataFile.println(dataString);  // Write the dataString to the file
     dataFile.close();              // Close the file
   }
+
+  return(dataString);
 }

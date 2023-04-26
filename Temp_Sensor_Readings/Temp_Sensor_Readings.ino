@@ -8,15 +8,24 @@ float hum, temp;
 
 void setup() {
   Serial.begin(9600);
+  while(!Serial);
   Serial.println("BEGIN:");
 
+Serial.println("TEMPERATURE");
   for (int i = 0; i < 100; i++)  //loop 100 times
   {
     temp_data(Data, hum, temp);  //Function from temp_sensor.h
-    Serial.print(temp);
-    Serial.print(" ");
     Serial.println(temp);
-    delay(50);
+    delay(250);
+    
+  }
+  Serial.println("HUMIDITY");
+    for (int i = 0; i < 100; i++)  //loop 100 times
+  {
+    temp_data(Data, hum, temp);  //Function from temp_sensor.h
+    Serial.println(hum);
+    delay(250);
+    
   }
   Serial.println("FINISHED");
 }

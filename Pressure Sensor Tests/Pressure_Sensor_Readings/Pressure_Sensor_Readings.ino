@@ -7,9 +7,9 @@ DS3231 clock;
 void setup() {
   //begin peripherals
   Serial.begin(9600);
-  Serial.println("BEGIN:");
-
   clock.begin();
+  while(!Serial);
+  
 
   pinMode(6, INPUT_PULLUP);  //Interrupt in with pullup -> needed for RTC
 
@@ -24,14 +24,15 @@ void setup() {
   clock.setDateTime(__DATE__, __TIME__);  //sync RTC to PC
 
 
-
+  Serial.println("BEGIN:");
   for (int i = 0; i < 100; i++)  //loop 100 times
   {
     //print pressure stuff
     Serial.println(Pressure_Sensor_Measure_mBar());
-    delay(50);
+    delay(10);
   }
   Serial.println("FINISHED");
+  clock.enable32kHz(false);   
 }
 
 void loop() {
