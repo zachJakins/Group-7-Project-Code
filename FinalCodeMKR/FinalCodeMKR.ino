@@ -22,12 +22,12 @@ float temperature;
 double pressure;
 double distance;
 int sample = 0;
-int timerCounter = TEMPORALRESOLUTION; //immediately set timer to the temporal resolution so it starts off with a measurement
+int timerCounter = TEMPORALRESOLUTION;  //immediately set timer to the temporal resolution so it starts off with a measurement
 
-boolean measure = false; //measure boolean
-boolean RadioReceived = false; //radio ping boolean
-boolean interrupt = false; //interrupt boolean
-boolean sleep = true; //sleep boolean
+boolean measure = false;    //measure boolean
+byte RadioReceived = 0;     //radio ping boolean
+boolean interrupt = false;  //interrupt boolean
+boolean sleep = true;       //sleep boolean
 
 //clock variables
 RTCAlarmTime alarm;
@@ -38,7 +38,7 @@ RTCDateTime dt;
 
 void setup() {
   Serial.begin(9600);
-  while(!Serial);
+  delay(500);
 
   clock.begin();
   SD.begin();
@@ -69,10 +69,6 @@ void alarmInt() {
   interrupt = true;  //allows main to work
 }
 
-
-
-
-
 void loop() {
 
   //Interrupts cause issues so putting this code in main is best.
@@ -86,19 +82,15 @@ void loop() {
       timerCounter = 0;
       measure = true;
     }
-
-    delay(4000);  //give the Nano 4s to boot up and attempt to receive something from the radio
+    delay(3000);  //give the Nano 4s to boot up and attempt to receive something from the radio
 
     //requests 1 byte from device NANOADDRESS (the nano)
-    Wire.requestFrom(NANOPOWERPIN, 1);
-    while (Wire.available())  //reads data
-    {
-      RadioReceived = Wire.read();  //Nano will send either a 0 (user isn't there) or a 1 (user is there and wants data.)
+    Wire.requestFrom(NANOADDRESS, sizeof(RadioReceived));
+    while(Wire.available()){
+    RadioReceived = Wire.read();  //Nano will send either a 0 (user isn't there) or a 1 (user is there and wants data.)
     }
-    
     Serial.println(RadioReceived);
-
-    Serial.println("INTEND");
+    
     //clears interrupt flags
     interrupt = false;
     clock.clearAlarm1();
@@ -109,7 +101,6 @@ void loop() {
   //on the occasion of measurement
   if (measure)  // THIS IS NECESSARY BECAUSE THE PRESSURE SENSOR MUST BE SYNCED TO 32K OSCILLATOR WHICH IS ONLY POSSIBLE IF IT RUNS IN "LOOP" NOT THE INTERRUPT
   {
-    Serial.println("MEAS");
     clock.enable32kHz(true);  //turn on the 32kHz 32K
 
     //take measurements
@@ -118,7 +109,7 @@ void loop() {
     pressure = Pressure_Sensor_Measure_mBar();        //PRESSURE WILL READ 1043.30 IF IT FAILS OR AN ABSURD VALUE >>1100mBar
     distance = TOF_Sensor_Distance_Measure_MM(MEAN);  //DISTANCE WILL READ 0.00 IF IT FAILS/TOO CLOSE/TOO FAR
 
-    
+
 
     //write to SD
     String dataString = logData(sample, distance, humidity, temperature, pressure, dt);
@@ -131,24 +122,29 @@ void loop() {
   }
 
   //if the nano receives a transmission this will send it all of the data from the SD via i2c so it can then transmit with the radio
-  if (RadioReceived) {
-    Serial.println("RAD");
+  if (RadioReceived == 1) {
     //send data to the nano
-    Wire.beginTransmission(NANOADDRESS);
-    //Read Line on SD
-
     // re-open the file for reading:
     File dataFile = SD.open(LOGNAME);
     if (dataFile) {
       // read from the file until there's nothing else in it:
+      Wire.beginTransmission(NANOADDRESS);
+      Wire.write("test");
+      Wire.endTransmission();
+      /*
       while (dataFile.available()) {
-        Wire.write(dataFile.read());
+        Wire.beginTransmission(NANOADDRESS);
+        char f = dataFile.read(); 
+        Wire.write(f);
+        Wire.endTransmission();  //ends transmission to nano
+        delay(1);//delay so we don't send data too quickly for the radio
       }
       dataFile.close();  // close the file:
+      */
     }
-    Wire.endTransmission();  //ends transmission to nano
+    delay(100);
 
-    RadioReceived = false;  //reset RadioReceived
+    RadioReceived = 0;  //reset RadioReceived
   }
   digitalWrite(NANOPOWERPIN, HIGH);  //turn off nano
 
@@ -186,5 +182,5 @@ String logData(int sampleNumber, double height, double hum, double temp, double 
     dataFile.close();              // Close the file
   }
 
-  return(dataString);
+  return (dataString);
 }
