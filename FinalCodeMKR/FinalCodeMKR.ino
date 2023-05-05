@@ -127,22 +127,18 @@ void loop() {
     // re-open the file for reading:
     File dataFile = SD.open(LOGNAME);
     if (dataFile) {
-      // read from the file until there's nothing else in it:
-      Wire.beginTransmission(NANOADDRESS);
-      Wire.write("test");
-      Wire.endTransmission();
-      /*
+      // read from the file until there's nothing else in it:  
       while (dataFile.available()) {
         Wire.beginTransmission(NANOADDRESS);
         char f = dataFile.read(); 
         Wire.write(f);
         Wire.endTransmission();  //ends transmission to nano
-        delay(1);//delay so we don't send data too quickly for the radio
+        delay(10);//delay so we don't send data too quickly for the radio
       }
       dataFile.close();  // close the file:
-      */
+      
     }
-    delay(100);
+
 
     RadioReceived = 0;  //reset RadioReceived
   }
