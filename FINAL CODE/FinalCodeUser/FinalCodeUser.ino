@@ -10,15 +10,14 @@ const byte address2[6] = "00002";
 
 void setup() {
   Serial.begin(9600);
-  while (!Serial);
 
   radio.begin();
-  radio.openReadingPipe(0, address2);
-  radio.openWritingPipe(address);
+  radio.openReadingPipe(1, address2);  //listens on address 2
+  radio.openWritingPipe(address);      //writes on address 1
 
   radio.setPALevel(RF24_PA_MAX);
 
-  Serial.println("Sample Number; Date; Time; Distance(mm); Pressure(mBar); Temperature(C); Humidity(%)\n");
+  Serial.println("Sample Number; Date; Time; Distance(mm); Pressure(mBar); Temperature(C); Humidity(%)");
 };
 
 void loop() {
@@ -27,14 +26,13 @@ void loop() {
   byte s = 1;
   radio.write(&s, sizeof(s));
 
+
   //read what comes back
   radio.startListening();
+  delay(400);
   if (radio.available()) {
-      byte r;
-      radio.read(&r, sizeof(r));
-      Serial.print(r);  //prints characters
-      if (r == '#') {
-        Serial.println();  //if we have a hashtag start a new line
-      }
+    char r[32] = "";
+    radio.read(&r, sizeof(r));
+    Serial.print(r);
   }
 }

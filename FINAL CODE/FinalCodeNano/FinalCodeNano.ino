@@ -7,12 +7,15 @@
 #define NOISEPIN 2
 #define NANOADDRESS 0x0B
 
-
+//receive variables
 boolean noReceive = true;
-boolean send = false;
-
 byte radioReceived = 0;
 
+
+//send variables
+char s[32];
+byte buf = 0;
+boolean send = false;
 
 
 RF24 radio(9, 8);  // CE, CSN
@@ -20,13 +23,12 @@ RF24 radio(9, 8);  // CE, CSN
 const byte address[6] = "00001";
 const byte address2[6] = "00002";
 
-char s[32];
-byte buf = 0;
+
 
 void setup() {
   //setup radio and i2c
   Wire.begin(NANOADDRESS);
-  Serial.begin(9600);  //Transmit doesnt work otherwise?
+  Serial.begin(9600);  //Transmit doesnt work otherwise
   radio.begin();
 
   radio.setPALevel(RF24_PA_MAX);
@@ -43,12 +45,11 @@ void setup() {
 
 void loop() {
   if (send) {
-    radio.stopListening();
-    radio.write(&s, sizeof(s));  //sends data
-
-    send = false;             //resets send
-    buf = 0;                  //resets buffer
-    memset(s, 0, sizeof(s));  //reset s
+    Serial.println("Attempt to Send");
+    Serial.print(s);
+    radio.write(s, sizeof(s));  //sends data
+    send = false;
+    Serial.println("Sent");
   }
 
   //while we havent received any data keep looking
@@ -63,6 +64,7 @@ void loop() {
       }
       //when we do get a ping stop looking
       noReceive = false;
+      radio.stopListening();
     };
   }
 }
@@ -71,7 +73,6 @@ void loop() {
 //When the MKR requests "radio status"
 void requestEvent() {
   Wire.write(radioReceived);  //tells the MKR whether or not we have a successful radio connection
-
   //resets radio status.
   noReceive = true;
   radioReceived = 0;
@@ -80,9 +81,16 @@ void requestEvent() {
 //If the radio has been 'pinged', the MKR will begin sending data over the i2c pins
 void receiveEvent(int howMany) {
   digitalWrite(NOISEPIN, HIGH);
-  send = true;
+  buf = 0;
+  memset(s, 0, sizeof(s));  //reset s
+
   while (Wire.available()) {
-    s[buf] = Wire.read();  // receive byte as a character and put int oarray
+    s[buf] = Wire.read();  // receive byte as a character and put into array
     buf++;
   }
+  send = true;
+
+  delay(50);
+  radio.stopListening();
+  delay(50);
 }

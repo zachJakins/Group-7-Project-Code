@@ -24,10 +24,10 @@ double distance;
 int sample = 0;
 int timerCounter = TEMPORALRESOLUTION;  //immediately set timer to the temporal resolution so it starts off with a measurement
 
-boolean measure = false;    //measure boolean
-byte RadioReceived = 0;     //radio ping boolean
-boolean interrupt = false;  //interrupt boolean
-boolean sleep = true;       //sleep boolean
+boolean measure = false;   //measure boolean
+byte RadioReceived = 0;    //radio ping boolean
+boolean interrupt = true;  //interrupt boolean begin with interrupt
+boolean sleep = true;      //sleep boolean
 
 //clock variables
 RTCAlarmTime alarm;
@@ -38,7 +38,9 @@ RTCDateTime dt;
 
 void setup() {
   Serial.begin(9600);
-  delay(500);
+  while (!Serial)
+    ;
+  Serial.println("Begin");
 
   clock.begin();
   SD.begin();
@@ -128,20 +130,25 @@ void loop() {
     File dataFile = SD.open(LOGNAME);
     if (dataFile) {
       // read from the file until there's nothing else in it:
+
+      int buf = 0;  //iterator
+      char f[32];
+      memset(f, 0, sizeof(f));
+
       while (dataFile.available()) {
         //create array for radio
-        char f[32];
-        int buf = 0;               //iterator
         f[buf] = dataFile.read();  //read into array
         buf++;
 
         //when the array is full send via i2c
-        if (buf == 32) {
+        if (buf == (sizeof(f) - 1)) {
           Wire.beginTransmission(NANOADDRESS);
           Wire.write(f);
           Wire.endTransmission();  //ends transmission to nano
-          buf = 0;                 //rest the buffer
-          delay(100);              //delay so radio has time to send (maybe reducable)
+          Serial.print(f);
+          buf = 0;  //reset the buffer
+          memset(f, 0, 32);
+          delay(800);  //delay so radio has time to send (maybe reducable)
         }
       }
       dataFile.close();  // close the file:
@@ -150,8 +157,9 @@ void loop() {
         Wire.beginTransmission(NANOADDRESS);
         Wire.write(f);
         Wire.endTransmission();  //ends transmission to nano
+        Serial.print(f);
         buf = 0;
-        delay(100);  //delay so radio can send maybe reducable
+        delay(800);  //delay so radio can send maybe reducable
       }
     }
 
